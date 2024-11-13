@@ -9,3 +9,5 @@
 7. 内存屏障，自选锁和原子量
 8. 链表
 
+## compile
+cmake -S. -Bbuild && cmake --build build
