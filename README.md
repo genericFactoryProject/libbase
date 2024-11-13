@@ -1,13 +1,15 @@
-# 基础接口
-## 接口介绍
-1. 类型定义和检查
-2. 标准宏定义，例如，对齐，判断大小，值交换等
-3. 编译器特性
-4. 基本运算定义，例如，位运算和位操作等
-5. 错误码值
-6. 断言操作
-7. 内存屏障，自选锁和原子量
-8. 链表
+# base interface
+
+## overview
+1. Type definition and checking
+2. Standard macro definition, such as alignment, size determination, value exchange, etc.
+3. Compiler features
+4. Basic operation definition, such as bitwise operation and bit manipulation, etc.
+5. Error code value
+6. Assertion operation
+7. Memory barrier, optional lock and atomic quantity
+8. Linked list
+9. Spinlock and mutex
 
 ## compile
 cmake -S. -Bbuild && cmake --build build
