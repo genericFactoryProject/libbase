@@ -23,8 +23,6 @@
 #ifndef __ASSEMBLY__
 
 #include <linux/compiler_types.h>
-#include <linux/kasan-checks.h>
-#include <linux/kcsan-checks.h>
 
 /*
  * Yes, this permits 64-bit accesses on 32-bit architectures. These will
@@ -79,10 +77,9 @@ unsigned long __read_once_word_nocheck(const void *addr)
 	(typeof(x))__read_once_word_nocheck(&(x));			\
 })
 
-static __no_kasan_or_inline
+static __always_inline
 unsigned long read_word_at_a_time(const void *addr)
 {
-	kasan_check_read(addr, 1);
 	return *(unsigned long *)addr;
 }
 

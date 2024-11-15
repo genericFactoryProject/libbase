@@ -9,9 +9,7 @@
 
 #include <linux/build_bug.h>
 #include <linux/compiler.h>
-
 #include <asm/barrier.h>
-#include <asm/lse.h>
 
 /*
  * We need separate acquire parameters for ll/sc and lse, since the full
@@ -206,7 +204,6 @@ __CMPXCHG_GEN(_mb)
 ({										\
 	if (sizeof(*(ptr1)) != 8)						\
 		BUILD_BUG();							\
-	VM_BUG_ON((unsigned long *)(ptr2) - (unsigned long *)(ptr1) != 1);	\
 })
 
 #define arch_cmpxchg_double(ptr1, ptr2, o1, o2, n1, n2)				\

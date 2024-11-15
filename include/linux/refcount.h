@@ -93,12 +93,9 @@
 #define _LINUX_REFCOUNT_H
 
 #include <linux/atomic.h>
-#include <linux/bug.h>
+#include <linux/compat.h>
 #include <linux/compiler.h>
 #include <linux/limits.h>
-#include <linux/spinlock_types.h>
-
-struct mutex;
 
 /**
  * typedef refcount_t - variant of atomic_t specialized for reference counts
@@ -361,7 +358,6 @@ static inline void refcount_dec(refcount_t *r)
 
 extern __must_check bool refcount_dec_if_one(refcount_t *r);
 extern __must_check bool refcount_dec_not_one(refcount_t *r);
-extern __must_check bool refcount_dec_and_mutex_lock(refcount_t *r, struct mutex *lock);
 extern __must_check bool refcount_dec_and_lock(refcount_t *r, spinlock_t *lock);
 extern __must_check bool refcount_dec_and_lock_irqsave(refcount_t *r,
 						       spinlock_t *lock,

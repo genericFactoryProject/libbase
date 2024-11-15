@@ -7,17 +7,11 @@
 #include <linux/stddef.h>	/* for NULL */
 #include <linux/errno.h>	/* for E2BIG */
 #include <linux/stdarg.h>
-#include <uapi/linux/string.h>
 
 extern char *strndup_user(const char __user *, long);
 extern void *memdup_user(const void __user *, size_t);
 extern void *vmemdup_user(const void __user *, size_t);
 extern void *memdup_user_nul(const void __user *, size_t);
-
-/*
- * Include machine specific inline routines
- */
-#include <asm/string.h>
 
 #ifndef __HAVE_ARCH_STRCPY
 extern char * strcpy(char *,const char *);
@@ -171,13 +165,13 @@ static inline void memcpy_flushcache(void *dst, const void *src, size_t cnt)
 void *memchr_inv(const void *s, int c, size_t n);
 char *strreplace(char *s, char old, char new);
 
-extern void kfree_const(const void *x);
+//extern void kfree_const(const void *x);
 
-extern char *kstrdup(const char *s, gfp_t gfp) __malloc;
-extern const char *kstrdup_const(const char *s, gfp_t gfp);
-extern char *kstrndup(const char *s, size_t len, gfp_t gfp);
-extern void *kmemdup(const void *src, size_t len, gfp_t gfp);
-extern char *kmemdup_nul(const char *s, size_t len, gfp_t gfp);
+//extern char *kstrdup(const char *s, gfp_t gfp) __malloc;
+//extern const char *kstrdup_const(const char *s, gfp_t gfp);
+//extern char *kstrndup(const char *s, size_t len, gfp_t gfp);
+//extern void *kmemdup(const void *src, size_t len, gfp_t gfp);
+//extern char *kmemdup_nul(const char *s, size_t len, gfp_t gfp);
 
 extern char **argv_split(gfp_t gfp, const char *str, int *argcp);
 extern void argv_free(char **argv);

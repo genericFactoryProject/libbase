@@ -9,27 +9,17 @@
 #define _LINUX_RADIX_TREE_H
 
 #include <linux/bitops.h>
-#include <linux/gfp.h>
 #include <linux/list.h>
 #include <linux/math.h>
-#include <linux/percpu.h>
-#include <linux/rcupdate.h>
-#include <linux/spinlock.h>
+#include <linux/compat.h>
 #include <linux/types.h>
 #include <linux/xarray.h>
-#include <linux/local_lock.h>
 
 /* Keep unconverted code working */
 #define radix_tree_root		xarray
 #define radix_tree_node		xa_node
 
-struct radix_tree_preload {
-	local_lock_t lock;
-	unsigned nr;
-	/* nodes->parent points to next preallocated node */
-	struct radix_tree_node *nodes;
-};
-DECLARE_PER_CPU(struct radix_tree_preload, radix_tree_preloads);
+
 
 /*
  * The bottom two bits of the slot determine how the remaining bits in the
@@ -234,8 +224,7 @@ void *radix_tree_delete(struct radix_tree_root *, unsigned long);
 unsigned int radix_tree_gang_lookup(const struct radix_tree_root *,
 			void **results, unsigned long first_index,
 			unsigned int max_items);
-int radix_tree_preload(gfp_t gfp_mask);
-int radix_tree_maybe_preload(gfp_t gfp_mask);
+
 void radix_tree_init(void);
 void *radix_tree_tag_set(struct radix_tree_root *,
 			unsigned long index, unsigned int tag);
@@ -252,11 +241,6 @@ unsigned int radix_tree_gang_lookup_tag_slot(const struct radix_tree_root *,
 		void __rcu ***results, unsigned long first_index,
 		unsigned int max_items, unsigned int tag);
 int radix_tree_tagged(const struct radix_tree_root *, unsigned int tag);
-
-static inline void radix_tree_preload_end(void)
-{
-	local_unlock(&radix_tree_preloads.lock);
-}
 
 void __rcu **idr_get_free(struct radix_tree_root *root,
 			      struct radix_tree_iter *iter, gfp_t gfp,

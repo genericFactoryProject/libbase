@@ -53,6 +53,17 @@ struct va_format {
 #endif
 #define printk(fmt, ...)
 
+/*
+ * Dummy printk for disabled debugging statements to use whilst maintaining
+ * gcc's format checking.
+ */
+#define no_printk(fmt, ...)				\
+({							\
+	if (0)						\
+		printk(fmt, ##__VA_ARGS__);		\
+	0;						\
+})
+
 /**
  * pr_debug - Print a debug-level message conditionally
  * @fmt: format string

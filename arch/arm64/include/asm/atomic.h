@@ -11,10 +11,9 @@
 
 #include <linux/compiler.h>
 #include <linux/types.h>
-
+#include <asm/atomic_ll_sc.h>
 #include <asm/barrier.h>
 #include <asm/cmpxchg.h>
-#include <asm/lse.h>
 
 #define ATOMIC_OP(op)							\
 static __always_inline void arch_##op(int i, atomic_t *v)		\

@@ -9,7 +9,6 @@
 #include <linux/bitmap.h>
 #include <linux/export.h>
 #include <linux/list.h>
-#include <linux/slab.h>
 #include <linux/xarray.h>
 
 /*
@@ -298,8 +297,7 @@ bool xas_nomem(struct xa_state *xas, gfp_t gfp)
 		xas_destroy(xas);
 		return false;
 	}
-	if (xas->xa->xa_flags & XA_FLAGS_ACCOUNT)
-		gfp |= __GFP_ACCOUNT;
+
 	xas->xa_alloc = kmalloc(sizeof(struct xa_node), gfp); // kmem_cache_alloc_lru(radix_tree_node_cachep, xas->xa_lru, gfp);
 	if (!xas->xa_alloc)
 		return false;
@@ -322,21 +320,14 @@ EXPORT_SYMBOL_GPL(xas_nomem);
 static bool __xas_nomem(struct xa_state *xas, gfp_t gfp)
 	__must_hold(xas->xa->xa_lock)
 {
-	unsigned int lock_type = xa_lock_type(xas->xa);
 
 	if (xas->xa_node != XA_ERROR(-ENOMEM)) {
 		xas_destroy(xas);
 		return false;
 	}
-	if (xas->xa->xa_flags & XA_FLAGS_ACCOUNT)
-		gfp |= __GFP_ACCOUNT;
-	if (gfpflags_allow_blocking(gfp)) {
-		xas_unlock_type(xas, lock_type);
-		xas->xa_alloc = kmalloc(sizeof(struct xa_node), gfp); // kmem_cache_alloc_lru(radix_tree_node_cachep, xas->xa_lru, gfp);
-		xas_lock_type(xas, lock_type);
-	} else {
-		xas->xa_alloc = kmalloc(sizeof(struct xa_node), gfp); // kmem_cache_alloc_lru(radix_tree_node_cachep, xas->xa_lru, gfp);
-	}
+
+	xas->xa_alloc = kmalloc(sizeof(struct xa_node), gfp); // kmem_cache_alloc_lru(radix_tree_node_cachep, xas->xa_lru, gfp);
+
 	if (!xas->xa_alloc)
 		return false;
 	xas->xa_alloc->parent = NULL;
@@ -364,12 +355,7 @@ static void *xas_alloc(struct xa_state *xas, unsigned int shift)
 	if (node) {
 		xas->xa_alloc = NULL;
 	} else {
-		gfp_t gfp = GFP_NOWAIT | __GFP_NOWARN;
-
-		if (xas->xa->xa_flags & XA_FLAGS_ACCOUNT)
-			gfp |= __GFP_ACCOUNT;
-
-		node = kmalloc(sizeof(struct xa_node), gfp); // kmem_cache_alloc_lru(radix_tree_node_cachep, xas->xa_lru, gfp);
+		node = kmalloc(sizeof(struct xa_node), 0); // kmem_cache_alloc_lru(radix_tree_node_cachep, xas->xa_lru, gfp);
 		if (!node) {
 			xas_set_err(xas, -ENOMEM);
 			return NULL;

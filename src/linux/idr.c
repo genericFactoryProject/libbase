@@ -1,10 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-only
 #include <linux/bitmap.h>
-#include <linux/bug.h>
+#include <linux/compat.h>
 #include <linux/export.h>
 #include <linux/idr.h>
-#include <linux/slab.h>
-#include <linux/spinlock.h>
 #include <linux/xarray.h>
 
 /**
@@ -415,7 +413,7 @@ next:
 		}
 		bitmap = alloc;
 		if (!bitmap)
-			bitmap = kzalloc(sizeof(*bitmap), GFP_NOWAIT);
+			bitmap = kzalloc(sizeof(*bitmap), 0);
 		if (!bitmap)
 			goto alloc;
 		bitmap->bitmap[0] = tmp;
@@ -442,7 +440,7 @@ next:
 		} else {
 			bitmap = alloc;
 			if (!bitmap)
-				bitmap = kzalloc(sizeof(*bitmap), GFP_NOWAIT);
+				bitmap = kzalloc(sizeof(*bitmap), 0);
 			if (!bitmap)
 				goto alloc;
 			__set_bit(bit, bitmap->bitmap);

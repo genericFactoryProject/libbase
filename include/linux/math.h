@@ -4,7 +4,6 @@
 
 #include <linux/types.h>
 #include <asm/div64.h>
-// #include <uapi/linux/kernel.h>
 
 /*
  * This looks more complex than it should be. But we need to

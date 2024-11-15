@@ -13,8 +13,6 @@
 #define __IDR_H__
 
 #include <linux/radix-tree.h>
-// #include <linux/gfp.h>
-// #include <linux/percpu.h>
 
 struct idr {
 	struct radix_tree_root	idr_rt;
@@ -100,16 +98,13 @@ static inline void idr_set_cursor(struct idr *idr, unsigned int val)
 
 #define idr_lock(idr)		xa_lock(&(idr)->idr_rt)
 #define idr_unlock(idr)		xa_unlock(&(idr)->idr_rt)
-#define idr_lock_bh(idr)	xa_lock_bh(&(idr)->idr_rt)
-#define idr_unlock_bh(idr)	xa_unlock_bh(&(idr)->idr_rt)
+
 #define idr_lock_irq(idr)	xa_lock_irq(&(idr)->idr_rt)
 #define idr_unlock_irq(idr)	xa_unlock_irq(&(idr)->idr_rt)
 #define idr_lock_irqsave(idr, flags) \
 				xa_lock_irqsave(&(idr)->idr_rt, flags)
 #define idr_unlock_irqrestore(idr, flags) \
 				xa_unlock_irqrestore(&(idr)->idr_rt, flags)
-
-void idr_preload(gfp_t gfp_mask);
 
 int idr_alloc(struct idr *, void *ptr, int start, int end, gfp_t);
 int __must_check idr_alloc_u32(struct idr *, void *ptr, u32 *id,
@@ -161,17 +156,6 @@ static inline bool idr_is_empty(const struct idr *idr)
 {
 	return radix_tree_empty(&idr->idr_rt) &&
 		radix_tree_tagged(&idr->idr_rt, IDR_FREE);
-}
-
-/**
- * idr_preload_end - end preload section started with idr_preload()
- *
- * Each idr_preload() should be matched with an invocation of this
- * function.  See idr_preload() for details.
- */
-static inline void idr_preload_end(void)
-{
-	local_unlock(&radix_tree_preloads.lock);
 }
 
 /**

@@ -89,6 +89,5 @@ static inline bool arch_clear_bit_unlock_is_negative_byte(unsigned int nr,
 #define arch_clear_bit_unlock_is_negative_byte arch_clear_bit_unlock_is_negative_byte
 #endif
 
-#include <asm-generic/bitops/instrumented-lock.h>
 
 #endif /* _ASM_GENERIC_BITOPS_LOCK_H_ */

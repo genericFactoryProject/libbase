@@ -10,15 +10,11 @@
  */
 
 #include <linux/bitmap.h>
-#include <linux/bug.h>
+#include <linux/compat.h>
 #include <linux/compiler.h>
-#include <linux/gfp.h>
 #include <linux/kconfig.h>
-#include <linux/rcupdate.h>
-#include <linux/spinlock.h>
 #include <linux/types.h>
 #include <linux/math.h>
-#include <linux/panic.h>
 #include <linux/minmax.h>
 
 /*
@@ -265,7 +261,6 @@ enum xa_lock_type {
  * and we remain compatible with that.
  */
 #define XA_FLAGS_LOCK_IRQ	((__force gfp_t)XA_LOCK_IRQ)
-#define XA_FLAGS_LOCK_BH	((__force gfp_t)XA_LOCK_BH)
 #define XA_FLAGS_TRACK_FREE	((__force gfp_t)4U)
 #define XA_FLAGS_ZERO_BUSY	((__force gfp_t)8U)
 #define XA_FLAGS_ALLOC_WRAPPED	((__force gfp_t)16U)
@@ -301,7 +296,6 @@ struct xarray {
 };
 
 #define XARRAY_INIT(name, flags) {				\
-	.xa_lock = __SPIN_LOCK_UNLOCKED(name.xa_lock),		\
 	.xa_flags = flags,					\
 	.xa_head = NULL,					\
 }

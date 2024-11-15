@@ -19,7 +19,7 @@
 
 #include <linux/rbtree_types.h>
 #include <linux/stddef.h>
-#include <linux/rcupdate.h>
+#include <linux/compat.h>
 
 #define rb_parent(r)   ((struct rb_node *)((r)->__rb_parent_color & ~3))
 

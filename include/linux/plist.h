@@ -76,8 +76,7 @@
 #include <linux/container_of.h>
 #include <linux/list.h>
 #include <linux/types.h>
-
-#include <asm/bug.h>
+#include <linux/compat.h>
 
 struct plist_head {
 	struct list_head node_list;

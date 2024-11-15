@@ -4,7 +4,6 @@
 
 #include <linux/types.h>
 #include <linux/math.h>
-// #include <vdso/math64.h>
 #include <asm/div64.h>
 
 static __always_inline u32

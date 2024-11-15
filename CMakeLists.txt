@@ -13,7 +13,7 @@ project(base LANGUAGES C)
 
 # ---- Create executable ----
 set(CMAKE_BUILD_TYPE "Debug")
-set(CMAKE_C_FLAGS_DEBUG "$ENV{CMAKE_CXX_FLAGS} -O0 -Wall -g")
+set(CMAKE_C_FLAGS_DEBUG "$ENV{CMAKE_CXX_FLAGS} -O0 -Wall -g -Wno-builtin-declaration-mismatch -Wno-implicit-function-declaration")
 
 # ---- CONFIG_* ----
 add_definitions(-D__KERNEL__="1")
@@ -23,7 +23,7 @@ add_definitions(-D__KERNEL__="1")
 
 file(GLOB_RECURSE headers CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/include/*.h")
 file(GLOB_RECURSE headers CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/*.h")
-file(GLOB_RECURSE sources CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/linux/find_bit.c")
+file(GLOB_RECURSE sources CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/*.c")
 
 add_library(base_lib ${headers} ${sources})
 target_include_directories(
@@ -33,7 +33,6 @@ target_include_directories(
                         $<INSTALL_INTERFACE:include/base_lib-${PROJECT_VERSION}>
 )
 
-file(GLOB sources CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/test/src/*.c)
 
 add_executable(base_bin ${sources})
 # link to your dependencies' targets here

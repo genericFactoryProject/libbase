@@ -9,7 +9,8 @@
 
 #ifndef __ASSEMBLY__
 
-#include <linux/kasan-checks.h>
+#define __lse_ll_sc_body(op, ...)		__ll_sc_##op(__VA_ARGS__)
+#define ARM64_LSE_ATOMIC_INSN(llsc, lse)	llsc
 
 #define __nops(n)	".rept	" #n "\nnop\n.endr\n"
 #define nops(n)		asm volatile(__nops(n))
@@ -34,17 +35,7 @@
  */
 #define dgh()		asm volatile("hint #6" : : : "memory")
 
-#ifdef CONFIG_ARM64_PSEUDO_NMI
-#define pmr_sync()						\
-	do {							\
-		extern struct static_key_false gic_pmr_sync;	\
-								\
-		if (static_branch_unlikely(&gic_pmr_sync))	\
-			dsb(sy);				\
-	} while(0)
-#else
 #define pmr_sync()	do {} while (0)
-#endif
 
 #define mb()		dsb(sy)
 #define rmb()		dsb(ld)
@@ -56,18 +47,7 @@
 
 #define io_stop_wc()	dgh()
 
-#define tsb_csync()								\
-	do {									\
-		/*								\
-		 * CPUs affected by Arm Erratum 2054223 or 2067961 needs	\
-		 * another TSB to ensure the trace is flushed. The barriers	\
-		 * don't have to be strictly back to back, as long as the	\
-		 * CPU is in trace prohibited state.				\
-		 */								\
-		if (cpus_have_final_cap(ARM64_WORKAROUND_TSB_FLUSH_FAILURE))	\
-			__tsb_csync();						\
-		__tsb_csync();							\
-	} while (0)
+#define tsb_csync() do {} while (0)
 
 /*
  * Generate a mask for array_index__nospec() that is ~0UL when 0 <= idx < sz
@@ -119,7 +99,6 @@ do {									\
 	union { __unqual_scalar_typeof(*p) __val; char __c[1]; } __u =	\
 		{ .__val = (__force __unqual_scalar_typeof(*p)) (v) };	\
 	compiletime_assert_atomic_type(*p);				\
-	kasan_check_write(__p, sizeof(*p));				\
 	switch (sizeof(*p)) {						\
 	case 1:								\
 		asm volatile ("stlrb %w1, %0"				\
@@ -153,7 +132,6 @@ do {									\
 	union { __unqual_scalar_typeof(*p) __val; char __c[1]; } __u;	\
 	typeof(p) __p = (p);						\
 	compiletime_assert_atomic_type(*p);				\
-	kasan_check_read(__p, sizeof(*p));				\
 	switch (sizeof(*p)) {						\
 	case 1:								\
 		asm volatile ("ldarb %w0, %1"				\
