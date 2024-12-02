@@ -1,4 +1,4 @@
-# base interface
+# wells for gf lib
 
 ## overview
 1. Type definition and checking
@@ -10,6 +10,3 @@
 7. Memory barrier, optional lock and atomic quantity
 8. Linked list
 9. Spinlock and mutex
-
-## compile
-cmake -S. -Bbuild && cmake --build build
