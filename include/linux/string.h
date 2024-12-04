@@ -13,6 +13,22 @@ extern void *memdup_user(const void __user *, size_t);
 extern void *vmemdup_user(const void __user *, size_t);
 extern void *memdup_user_nul(const void __user *, size_t);
 
+/* printf engine that parses the format string and generates output */
+
+/* function pointer to pass the printf engine, called back during the formatting.
+ * input is a string to output, length bytes to output,
+ * return code is number of characters that would have been written, or error code (if negative)
+ */
+typedef int (*_printf_engine_output_func)(const char *str, size_t len, void *state);
+
+int _printf_engine(_printf_engine_output_func out, void *state, const char *fmt, va_list ap);
+
+int printf(const char *format, ...) __attribute__((format(printf, 1, 2)));
+int sprintf(char *str, const char *fmt, ...) __attribute__((format(printf, 2, 3)));
+int snprintf(char *str, size_t len, const char *fmt, ...) __attribute__((format(printf, 3, 4)));
+int vsprintf(char *str, const char *fmt, va_list ap);
+int vsnprintf(char *str, size_t len, const char *fmt, va_list ap);
+
 #ifndef __HAVE_ARCH_STRCPY
 extern char * strcpy(char *,const char *);
 #endif
