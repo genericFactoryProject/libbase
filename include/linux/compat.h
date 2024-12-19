@@ -69,8 +69,10 @@ enum {
 #define kfree_const(x) (void)x
 #define kstrdup(x, y) (void *)0
 #define kvasprintf_const(x, y, z) (void *)0
+#define kasprintf(x,y,z) (void *)0
 
 typedef unsigned int gfp_t;
+typedef unsigned int pgprot_t;
 
 #define __GFP_BITS_SHIFT (27)
 #define __GFP_BITS_MASK ((__force gfp_t)((1 << __GFP_BITS_SHIFT) - 1))
@@ -91,7 +93,7 @@ struct lock_class_key {
 #define raw_spin_unlock_irqrestore(x, y) (void)(x);(void)y
 #define __SPIN_LOCK_UNLOCKED(x) (x)
 #define DEFINE_SPINLOCK(x) spinlock_t x
-
+#define DEFINE_RAW_SPINLOCK(x) raw_spinlock_t x
 typedef unsigned int rwlock_t;
 
 #define DEFINE_RWLOCK(x) rwlock_t x
