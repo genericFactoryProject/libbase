@@ -8,7 +8,7 @@
 #include <linux/errno.h>
 #include <linux/minmax.h>
 #include <linux/export.h>
-#include <linux/compat.h>
+#include <linux/lynix-compat.h>
 
 const char hex_asc[] = "0123456789abcdef";
 EXPORT_SYMBOL(hex_asc);

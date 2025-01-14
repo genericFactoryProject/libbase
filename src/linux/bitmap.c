@@ -6,7 +6,7 @@
 
 #include <linux/bitmap.h>
 #include <linux/bitops.h>
-#include <linux/compat.h>
+#include <linux/lynix-compat.h>
 #include <linux/ctype.h>
 #include <linux/errno.h>
 #include <linux/export.h>

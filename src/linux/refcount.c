@@ -6,7 +6,7 @@
 
 #include <linux/refcount.h>
 #include <linux/export.h>
-#include <linux/compat.h>
+#include <linux/lynix-compat.h>
 
 #define REFCOUNT_WARN(str)	WARN_ONCE(1, "refcount_t: " str ".\n")
 

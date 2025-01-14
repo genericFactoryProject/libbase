@@ -4,3 +4,4 @@
 #define CONFIG_BASE_SMALL   1
 #define CONFIG_XARRAY_MULTI 1
 #define CONFIG_MMU          1
+#define CONFIG_PCI 1

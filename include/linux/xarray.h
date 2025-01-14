@@ -10,7 +10,7 @@
  */
 
 #include <linux/bitmap.h>
-#include <linux/compat.h>
+#include <linux/lynix-compat.h>
 #include <linux/compiler.h>
 #include <linux/kconfig.h>
 #include <linux/types.h>

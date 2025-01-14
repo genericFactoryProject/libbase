@@ -10,7 +10,7 @@
 #ifndef _LINUX_KLIST_H
 #define _LINUX_KLIST_H
 
-#include <linux/compat.h>
+#include <linux/lynix-compat.h>
 #include <linux/kref.h>
 #include <linux/list.h>
 

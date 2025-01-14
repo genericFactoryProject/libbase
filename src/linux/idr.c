@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 #include <linux/bitmap.h>
-#include <linux/compat.h>
+#include <linux/lynix-compat.h>
 #include <linux/export.h>
 #include <linux/idr.h>
 #include <linux/xarray.h>

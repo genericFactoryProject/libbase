@@ -13,7 +13,7 @@
 #ifndef _KREF_H_
 #define _KREF_H_
 
-#include <linux/compat.h>
+#include <linux/lynix-compat.h>
 #include <linux/refcount.h>
 
 struct kref {

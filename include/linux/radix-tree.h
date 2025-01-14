@@ -11,7 +11,7 @@
 #include <linux/bitops.h>
 #include <linux/list.h>
 #include <linux/math.h>
-#include <linux/compat.h>
+#include <linux/lynix-compat.h>
 #include <linux/types.h>
 #include <linux/xarray.h>
 

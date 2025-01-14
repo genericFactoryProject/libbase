@@ -93,7 +93,7 @@
 #define _LINUX_REFCOUNT_H
 
 #include <linux/atomic.h>
-#include <linux/compat.h>
+#include <linux/lynix-compat.h>
 #include <linux/compiler.h>
 #include <linux/limits.h>
 

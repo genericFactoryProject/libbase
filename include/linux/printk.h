@@ -64,6 +64,8 @@ struct va_format {
 	0;						\
 })
 
+#define pr_warn_once(fmt, ...)
+
 /**
  * pr_debug - Print a debug-level message conditionally
  * @fmt: format string

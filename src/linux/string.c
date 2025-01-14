@@ -19,7 +19,7 @@
 #include <linux/string.h>
 #include <linux/ctype.h>
 #include <linux/export.h>
-#include <linux/compat.h>
+#include <linux/lynix-compat.h>
 #include <linux/errno.h>
 #include <linux/limits.h>
 

@@ -6,7 +6,7 @@
  *	Huang Ying <ying.huang@intel.com>
  */
 
-#include <linux/compat.h>
+#include <linux/lynix-compat.h>
 #include <linux/ctype.h>
 #include <linux/errno.h>
 #include <linux/export.h>

@@ -5,7 +5,7 @@
  * Copyright 31 August 2008 James Bottomley
  * Copyright (C) 2013, Intel Corporation
  */
-#include <linux/compat.h>
+#include <linux/lynix-compat.h>
 #include <linux/math64.h>
 #include <linux/export.h>
 #include <linux/ctype.h>
