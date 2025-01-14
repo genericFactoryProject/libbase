@@ -3,6 +3,8 @@
 #include <linux/compiler.h>
 #include <linux/printk.h>
 #include <linux/param.h>
+#include <linux/init.h>
+#include <linux/limits.h>
 
 /* generic data direction definitions */
 #define READ			0
@@ -160,6 +162,27 @@ typedef u16 blk_short_t;
 #define BLK_TAG_ALLOC_FIFO 0 /* allocate starting from 0 */
 #define BLK_TAG_ALLOC_RR 1 /* allocate starting from last allocated tag */
 
+/**
+ * module_init() - driver initialization entry point
+ * @x: function to be run at kernel boot time or module insertion
+ *
+ * module_init() will either be called during do_initcalls() (if
+ * builtin) or at module insertion time (if a module).  There can only
+ * be one per module.
+ */
+#define module_init(x)	__initcall(x);
+
+/**
+ * module_exit() - driver exit entry point
+ * @x: function to be run when driver is removed
+ *
+ * module_exit() will wrap the driver clean-up code
+ * with cleanup_module() when used with rmmod when
+ * the driver is a module.  If the driver is statically
+ * compiled into the kernel, module_exit() has no effect.
+ * There can only be one per module.
+ */
+#define module_exit(x)	__exitcall(x);
 
 #define MODULE_AUTHOR(x)
 #define MODULE_DESCRIPTION(x);
