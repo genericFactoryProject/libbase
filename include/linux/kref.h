@@ -13,8 +13,10 @@
 #ifndef _KREF_H_
 #define _KREF_H_
 
-#include <linux/lynix-compat.h>
+//#include <linux/spinlock.h>
 #include <linux/refcount.h>
+#include <linux/lynix-compat.h>
+
 
 struct kref {
 	refcount_t refcount;
@@ -62,6 +64,17 @@ static inline void kref_get(struct kref *kref)
 static inline int kref_put(struct kref *kref, void (*release)(struct kref *kref))
 {
 	if (refcount_dec_and_test(&kref->refcount)) {
+		release(kref);
+		return 1;
+	}
+	return 0;
+}
+
+static inline int kref_put_mutex(struct kref *kref,
+				 void (*release)(struct kref *kref),
+				 struct mutex *lock)
+{
+	if (refcount_dec_and_mutex_lock(&kref->refcount, lock)) {
 		release(kref);
 		return 1;
 	}

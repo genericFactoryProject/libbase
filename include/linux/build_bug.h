@@ -5,7 +5,7 @@
 #include <linux/compiler.h>
 
 #ifdef __CHECKER__
-#define BUILD_BUG_ON_ZERO(e) (0)
+#define BUILD_BUG_ON_ZERO(e) (0UL)
 #else /* __CHECKER__ */
 /*
  * Force a compilation error if condition is true, but also produce a

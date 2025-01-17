@@ -7,6 +7,8 @@
 
 #include <linux/scatterlist.h>
 #include <linux/lynix-compat.h>
+#include <linux/minmax.h>
+#include <linux/export.h>
 
 struct sg_splitter {
 	struct scatterlist *in_sg0;

@@ -28,6 +28,14 @@ int sprintf(char *str, const char *fmt, ...) __attribute__((format(printf, 2, 3)
 int snprintf(char *str, size_t len, const char *fmt, ...) __attribute__((format(printf, 3, 4)));
 int vsprintf(char *str, const char *fmt, va_list ap);
 int vsnprintf(char *str, size_t len, const char *fmt, va_list ap);
+int vscnprintf(char *buf, size_t size, const char *fmt, va_list args);
+int scnprintf(char *buf, size_t size, const char *fmt, ...);
+char *kasprintf(gfp_t gfp, const char *fmt, ...);
+char *kvasprintf(gfp_t gfp, const char *fmt, va_list args);
+const char *kvasprintf_const(gfp_t gfp, const char *fmt, va_list args);
+int sscanf(const char *, const char *, ...);
+int vsscanf(const char *, const char *, va_list);
+unsigned long long memparse(const char *ptr, char **retptr);
 
 #ifndef __HAVE_ARCH_STRCPY
 extern char * strcpy(char *,const char *);

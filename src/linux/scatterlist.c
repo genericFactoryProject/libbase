@@ -9,6 +9,9 @@
 #include <linux/scatterlist.h>
 // #include <linux/highmem.h>
 // #include <linux/kmemleak.h>
+#include <linux/minmax.h>
+#include <linux/err.h>
+#include <linux/align.h>
 
 /**
  * sg_next - return the next scatterlist entry in a list
@@ -158,9 +161,9 @@ static struct scatterlist *sg_kmalloc(unsigned int nents, gfp_t gfp_mask)
 		 * false-positive) we need to inform kmemleak of all the
 		 * intermediate allocations.
 		 */
-		void *ptr = (void *) __get_free_page(gfp_mask);
-		kmemleak_alloc(ptr, PAGE_SIZE, 1, gfp_mask);
-		return ptr;
+		//void *ptr = (void *) __get_free_page(gfp_mask);
+		//kmemleak_alloc(ptr, PAGE_SIZE, 1, gfp_mask);
+		return NULL;//ptr;
 	} else
 		return kmalloc_array(nents, sizeof(struct scatterlist),
 				     gfp_mask);
@@ -169,7 +172,7 @@ static struct scatterlist *sg_kmalloc(unsigned int nents, gfp_t gfp_mask)
 static void sg_kfree(struct scatterlist *sg, unsigned int nents)
 {
 	if (nents == SG_MAX_SINGLE_ALLOC) {
-		kmemleak_free(sg);
+		//kmemleak_free(sg);
 		free_page((unsigned long) sg);
 	} else
 		kfree(sg);
@@ -409,7 +412,7 @@ static struct scatterlist *get_next_sg(struct sg_append_table *table,
 	}
 	return new_sg;
 }
-
+#if 0
 /**
  * sg_alloc_append_table_from_pages - Allocate and initialize an append sg
  *                                    table from an array of pages
@@ -708,6 +711,7 @@ void sgl_free(struct scatterlist *sgl)
 EXPORT_SYMBOL(sgl_free);
 
 #endif /* CONFIG_SGL_ALLOC */
+
 
 void __sg_page_iter_start(struct sg_page_iter *piter,
 			  struct scatterlist *sglist, unsigned int nents,
@@ -1085,3 +1089,4 @@ size_t sg_zero_buffer(struct scatterlist *sgl, unsigned int nents,
 	return offset;
 }
 EXPORT_SYMBOL(sg_zero_buffer);
+#endif

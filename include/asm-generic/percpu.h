@@ -6,6 +6,7 @@
 // #include <linux/threads.h>
 #include <linux/percpu-defs.h>
 
+
 #ifdef CONFIG_SMP
 
 /*
@@ -115,9 +116,7 @@ do {									\
 #define __this_cpu_generic_read_nopreempt(pcp)				\
 ({									\
 	typeof(pcp) ___ret;						\
-	preempt_disable_notrace();					\
 	___ret = READ_ONCE(*raw_cpu_ptr(&(pcp)));			\
-	preempt_enable_notrace();					\
 	___ret;								\
 })
 
@@ -125,9 +124,7 @@ do {									\
 ({									\
 	typeof(pcp) ___ret;						\
 	unsigned long ___flags;						\
-	raw_local_irq_save(___flags);					\
 	___ret = raw_cpu_generic_read(pcp);				\
-	raw_local_irq_restore(___flags);				\
 	___ret;								\
 })
 

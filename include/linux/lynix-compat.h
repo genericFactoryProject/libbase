@@ -5,6 +5,71 @@
 #include <linux/param.h>
 #include <linux/init.h>
 #include <linux/limits.h>
+#include <linux/errno.h>
+#include <linux/string.h>
+#include <linux/align.h>
+
+/**
+ * upper_32_bits - return bits 32-63 of a number
+ * @n: the number we're accessing
+ *
+ * A basic shift-right of a 64- or 32-bit quantity.  Use this to suppress
+ * the "right shift count >= width of type" warning when that quantity is
+ * 32-bits.
+ */
+#define upper_32_bits(n) ((u32)(((n) >> 16) >> 16))
+
+/**
+ * lower_32_bits - return bits 0-31 of a number
+ * @n: the number we're accessing
+ */
+#define lower_32_bits(n) ((u32)((n) & 0xffffffff))
+
+/**
+ * upper_16_bits - return bits 16-31 of a number
+ * @n: the number we're accessing
+ */
+#define upper_16_bits(n) ((u16)((n) >> 16))
+
+/**
+ * lower_16_bits - return bits 0-15 of a number
+ * @n: the number we're accessing
+ */
+#define lower_16_bits(n) ((u16)((n) & 0xffff))
+
+struct static_key_true {
+	int key;
+};
+
+struct static_key_false {
+	int key;
+};
+
+#define STATIC_KEY_INIT_TRUE 1
+#define STATIC_KEY_INIT_FALSE 0
+
+
+#define STATIC_KEY_TRUE_INIT  (struct static_key_true) { .key = STATIC_KEY_INIT_TRUE,  }
+#define STATIC_KEY_FALSE_INIT (struct static_key_false){ .key = STATIC_KEY_INIT_FALSE, }
+
+#define DEFINE_STATIC_KEY_TRUE(name)	\
+	struct static_key_true name = STATIC_KEY_TRUE_INIT
+
+#define DECLARE_STATIC_KEY_TRUE(name)	\
+	extern struct static_key_true name
+
+#define DEFINE_STATIC_KEY_FALSE(name)	\
+	struct static_key_false name = STATIC_KEY_FALSE_INIT
+
+#define DECLARE_STATIC_KEY_FALSE(name)	\
+	extern struct static_key_false name
+
+#define static_branch_likely(x) likely((x)->key)
+#define static_branch_unlikely(x) unlikely((x)->key)
+#define static_branch_inc(x) (((x)->key)++)
+#define static_branch_dec(x) (((x)->key)--)
+#define static_branch_enable(x) ((x)->key = true)
+#define static_branch_disable(x) ((x)->key = false)
 
 /* generic data direction definitions */
 #define READ			0
@@ -104,6 +169,15 @@ typedef u16 blk_short_t;
 
 #define BLK_STS_AGAIN		((__force blk_status_t)12)
 
+enum blk_default_limits {
+	BLK_MAX_SEGMENTS	= 128,
+	BLK_SAFE_MAX_SECTORS	= 255,
+	BLK_DEF_MAX_SECTORS	= 2560,
+	BLK_MAX_SEGMENT_SIZE	= 65536,
+	BLK_SEG_BOUNDARY_MASK	= 0xFFFFFFFFUL,
+};
+
+
 /*
  * BLK_STS_DEV_RESOURCE is returned from the driver to the block layer if
  * device related resources are unavailable, but the driver can guarantee
@@ -162,6 +236,112 @@ typedef u16 blk_short_t;
 #define BLK_TAG_ALLOC_FIFO 0 /* allocate starting from 0 */
 #define BLK_TAG_ALLOC_RR 1 /* allocate starting from last allocated tag */
 
+/*
+ * Operations and flags common to the bio and request structures.
+ * We use 8 bits for encoding the operation, and the remaining 24 for flags.
+ *
+ * The least significant bit of the operation number indicates the data
+ * transfer direction:
+ *
+ *   - if the least significant bit is set transfers are TO the device
+ *   - if the least significant bit is not set transfers are FROM the device
+ *
+ * If a operation does not transfer data the least significant bit has no
+ * meaning.
+ */
+#define REQ_OP_BITS	8
+#define REQ_OP_MASK	((1 << REQ_OP_BITS) - 1)
+#define REQ_FLAG_BITS	24
+
+enum req_opf {
+	/* read sectors from the device */
+	REQ_OP_READ		= 0,
+	/* write sectors to the device */
+	REQ_OP_WRITE		= 1,
+	/* flush the volatile write cache */
+	REQ_OP_FLUSH		= 2,
+	/* discard sectors */
+	REQ_OP_DISCARD		= 3,
+	/* securely erase sectors */
+	REQ_OP_SECURE_ERASE	= 5,
+	/* write the zero filled sector many times */
+	REQ_OP_WRITE_ZEROES	= 9,
+	/* Open a zone */
+	REQ_OP_ZONE_OPEN	= 10,
+	/* Close a zone */
+	REQ_OP_ZONE_CLOSE	= 11,
+	/* Transition a zone to full */
+	REQ_OP_ZONE_FINISH	= 12,
+	/* write data at the current zone write pointer */
+	REQ_OP_ZONE_APPEND	= 13,
+	/* reset a zone write pointer */
+	REQ_OP_ZONE_RESET	= 15,
+	/* reset all the zone present on the device */
+	REQ_OP_ZONE_RESET_ALL	= 17,
+
+	/* Driver private requests */
+	REQ_OP_DRV_IN		= 34,
+	REQ_OP_DRV_OUT		= 35,
+
+	REQ_OP_LAST,
+};
+enum req_flag_bits {
+	__REQ_FAILFAST_DEV =	/* no driver retries of device errors */
+		REQ_OP_BITS,
+	__REQ_FAILFAST_TRANSPORT, /* no driver retries of transport errors */
+	__REQ_FAILFAST_DRIVER,	/* no driver retries of driver errors */
+	__REQ_SYNC,		/* request is sync (sync write or read) */
+	__REQ_META,		/* metadata io request */
+	__REQ_PRIO,		/* boost priority in cfq */
+	__REQ_NOMERGE,		/* don't touch this for merging */
+	__REQ_IDLE,		/* anticipate more IO after this one */
+	__REQ_INTEGRITY,	/* I/O includes block integrity payload */
+	__REQ_FUA,		/* forced unit access */
+	__REQ_PREFLUSH,		/* request for cache flush */
+	__REQ_RAHEAD,		/* read ahead, can fail anytime */
+	__REQ_BACKGROUND,	/* background IO */
+	__REQ_NOWAIT,           /* Don't wait if request will block */
+	/*
+	 * When a shared kthread needs to issue a bio for a cgroup, doing
+	 * so synchronously can lead to priority inversions as the kthread
+	 * can be trapped waiting for that cgroup.  CGROUP_PUNT flag makes
+	 * submit_bio() punt the actual issuing to a dedicated per-blkcg
+	 * work item to avoid such priority inversions.
+	 */
+	__REQ_CGROUP_PUNT,
+
+	/* command specific flags for REQ_OP_WRITE_ZEROES: */
+	__REQ_NOUNMAP,		/* do not free blocks when zeroing */
+
+	__REQ_POLLED,		/* caller polls for completion using bio_poll */
+
+	/* for driver use */
+	__REQ_DRV,
+	__REQ_SWAP,		/* swapping request. */
+	__REQ_NR_BITS,		/* stops here */
+};
+
+#define REQ_FAILFAST_DEV	(1ULL << __REQ_FAILFAST_DEV)
+#define REQ_FAILFAST_TRANSPORT	(1ULL << __REQ_FAILFAST_TRANSPORT)
+#define REQ_FAILFAST_DRIVER	(1ULL << __REQ_FAILFAST_DRIVER)
+#define REQ_SYNC		(1ULL << __REQ_SYNC)
+#define REQ_META		(1ULL << __REQ_META)
+#define REQ_PRIO		(1ULL << __REQ_PRIO)
+#define REQ_NOMERGE		(1ULL << __REQ_NOMERGE)
+#define REQ_IDLE		(1ULL << __REQ_IDLE)
+#define REQ_INTEGRITY		(1ULL << __REQ_INTEGRITY)
+#define REQ_FUA			(1ULL << __REQ_FUA)
+#define REQ_PREFLUSH		(1ULL << __REQ_PREFLUSH)
+#define REQ_RAHEAD		(1ULL << __REQ_RAHEAD)
+#define REQ_BACKGROUND		(1ULL << __REQ_BACKGROUND)
+#define REQ_NOWAIT		(1ULL << __REQ_NOWAIT)
+#define REQ_CGROUP_PUNT		(1ULL << __REQ_CGROUP_PUNT)
+
+#define REQ_NOUNMAP		(1ULL << __REQ_NOUNMAP)
+#define REQ_POLLED		(1ULL << __REQ_POLLED)
+
+#define REQ_DRV			(1ULL << __REQ_DRV)
+#define REQ_SWAP		(1ULL << __REQ_SWAP)
 /**
  * module_init() - driver initialization entry point
  * @x: function to be run at kernel boot time or module insertion
@@ -262,15 +442,19 @@ enum {
 				(unsigned long)ZERO_SIZE_PTR)
 #define ARCH_KMALLOC_MINALIGN __alignof__(unsigned long long)
 #define kmalloc(x, y)   (void *)0
+#define kmalloc_array(x,y,z) (void *)0
 #define kzalloc(x, y)   (void *)0
 #define kcalloc(x, y ,z) (void *)0
+#define get_zeroed_page(x) (void *)0
 #define kfree(x) (void)(x)
 #define ksize(x) 0
 #define kvfree(x) (void)(x)
 #define free_pages(x, y) (void)x;(void)y
+#define free_page(x) (void)x
 #define __get_free_pages(x, y) (unsigned long)0
 #define kstrndup(x, y, z) (void *)0
 #define kmemdup(x, y, z) (void *)0
+#define kmemdup_nul(x, y, z) (void *)0
 #define kstrdup_const(x, y) (void *)0
 #define kfree_const(x) (void)x
 #define kstrdup(x, y) (void *)0
@@ -280,6 +464,9 @@ enum {
 typedef unsigned int gfp_t;
 typedef unsigned int pgprot_t;
 
+/* to align the pointer to the (next) page boundary */
+#define PAGE_ALIGN(addr) ALIGN(addr, PAGE_SIZE)
+
 #define __GFP_BITS_SHIFT (27)
 #define __GFP_BITS_MASK ((__force gfp_t)((1 << __GFP_BITS_SHIFT) - 1))
 typedef unsigned int spinlock_t;
@@ -288,17 +475,31 @@ struct lock_class_key {
 
 };
 
-#define spin_lock_irqsave(x, y) (void)(x);(void)y
-#define spin_unlock_irqrestore(x, y) (void)(x);(void)y
+
+struct rt_mutex {
+
+};
+
+#define rt_mutex_lock_nested(x, y)
+#define rt_mutex_trylock(x) 0
+#define rt_mutex_unlock(x)
+#define rt_mutex_init(x)
+
+#define spin_lock_irqsave(x, y) do { (void)(x);(void)y; } while(0);
+#define spin_unlock_irqrestore(x, y) do { (void)(x);(void)y; } while(0);
+#define spin_trylock_irqsave(x, y) (0)
 #define spin_lock_irq(x) (void)(x)
 #define spin_unlock_irq(x) (void)(x)
 #define spin_lock(x) (void)(x)
 #define spin_unlock(x) (void)(x)
 #define spin_lock_init(x) (void)(x)
-#define raw_spin_lock_irqsave(x, y) (void)(x);(void)y
-#define raw_spin_unlock_irqrestore(x, y) (void)(x);(void)y
+#define raw_spin_lock_irqsave(x, y) (void)(x);(void)y;
+#define raw_spin_unlock_irqrestore(x, y) (void)(x);(void)y;
 #define raw_spin_lock(x)
 #define raw_spin_unlock(x)
+#define raw_spin_lock_irq(x)
+#define raw_spin_unlock_irq(x)
+#define raw_spin_lock_init(x)
 #define __SPIN_LOCK_UNLOCKED(x) (x)
 #define DEFINE_SPINLOCK(x) spinlock_t x
 #define DEFINE_RAW_SPINLOCK(x) raw_spinlock_t x
@@ -309,6 +510,15 @@ typedef unsigned int rwlock_t;
 #define write_unlock(x)
 #define read_lock(x)
 #define read_unlock(x)
+
+struct semaphore {
+
+};
+#define up(x) (void)(x)
+#define down(x) (void)(x)
+#define down_killable(x) 0
+#define down_trylock(x) 0
+#define sema_init(x, y)
 
 struct rw_semaphore {
 
@@ -332,9 +542,14 @@ struct mutex {
 #define __mutex_init(x,y,z) (void)(x);(void)y;(void)(z)
 #define mutex_lock(x) (void)(x)
 #define mutex_lock_interruptible(x) 0
+#define mutex_lock_killable(x) 0
+#define mutex_is_locked(x) 0
 #define mutex_trylock(x) 0
+#define mutex_destroy(x)
 #define mutex_unlock(x) (void)(x)
 #define lockdep_assert_held(x) (void)(x)
+#define mutex_lock_nested(x, y)
+
 
 #define rcu_dereference_check(x, y) (x)
 #define rcu_dereference_protected(x, y) (x)
@@ -363,6 +578,8 @@ struct mutex {
 #define WARN_ONCE(condition, format...) WARN(condition, format)
 #define WARN_TAINT(condition, taint, format...) WARN(condition, format)
 #define WARN_TAINT_ONCE(condition, taint, format...) WARN(condition, format)
+#define MAYBE_BUILD_BUG_ON(condition) BUG_ON(condition)
+
 /*
  * WARN_ON_SMP() is for cases that the warning is either
  * meaningless for !SMP or may even cause failures.

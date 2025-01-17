@@ -21,7 +21,7 @@
 	__aligned(sizeof(void *))					\
 	= { (unsigned long)&sym, __kstrtab_##sym, __kstrtabns_##sym }
 
-#define KBUILD_MODNAME ((void *)0)
+#define KBUILD_MODNAME
 
 struct kernel_symbol {
 	unsigned long value;
