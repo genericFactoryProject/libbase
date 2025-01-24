@@ -16,6 +16,7 @@
 #include <linux/types.h>
 #include <linux/math.h>
 #include <linux/minmax.h>
+#include <linux/err.h>
 
 /*
  * The bottom two bits of the entry determine how the XArray interprets
@@ -251,6 +252,7 @@ typedef unsigned __bitwise xa_mark_t;
 #define XA_PRESENT		((__force xa_mark_t)8U)
 #define XA_MARK_MAX		XA_MARK_2
 #define XA_FREE_MARK		XA_MARK_0
+/* XA_MAX_MARKS = 3 = XA_MARK_FLAGS_START */
 
 enum xa_lock_type {
 	XA_LOCK_IRQ = 1,
@@ -292,7 +294,7 @@ struct xarray {
 	spinlock_t	xa_lock;
 /* private: The rest of the data structure is not to be used directly. */
 	gfp_t		xa_flags;
-	void __rcu *	xa_head;
+	void __rcu *	xa_head; /* pointer xa_node */
 };
 
 #define XARRAY_INIT(name, flags) {				\
@@ -942,7 +944,7 @@ static inline void xa_release(struct xarray *xa, unsigned long index)
  * either a value entry or a sibling of a value entry.
  */
 struct xa_node {
-	unsigned char	shift;		/* Bits remaining in each slot */
+	unsigned char	shift;		/* Bits remaining in each slot (0~+), 0 is last level; level+1, shift+XA_CHUNK_SHIFT */
 	unsigned char	offset;		/* Slot offset in parent */
 	unsigned char	count;		/* Total entry count */
 	unsigned char	nr_values;	/* Value entry count */
@@ -953,7 +955,7 @@ struct xa_node {
 		struct rcu_head	rcu_head;	/* Used when freeing node */
 	};
 	void __rcu	*slots[XA_CHUNK_SIZE];
-	union {
+	union { /* slot bitmap */
 		unsigned long	tags[XA_MAX_MARKS][XA_MARK_LONGS];
 		unsigned long	marks[XA_MAX_MARKS][XA_MARK_LONGS];
 	};
@@ -1041,7 +1043,7 @@ static inline struct xa_node *xa_to_node(const void *entry)
 }
 
 /* Private */
-static inline bool xa_is_node(const void *entry)
+static inline bool xa_is_node(const void *entry) /* i mean, pte == page table, not page or block */
 {
 	return xa_is_internal(entry) && (unsigned long)entry > 4096;
 }
@@ -1061,6 +1063,8 @@ static inline unsigned long xa_to_sibling(const void *entry)
 /**
  * xa_is_sibling() - Is the entry a sibling entry?
  * @entry: Entry retrieved from the XArray
+ *
+ * Only CONFIG_XARRAY_MULTI, the first is owner, others are sibling.
  *
  * Return: %true if the entry is a sibling entry.
  */
@@ -1127,13 +1131,17 @@ void xa_delete_node(struct xa_node *, xa_update_node_t);
  * during an operation, it is set to an %XAS_ERROR value.  If we run off the
  * end of the allocated nodes, it is set to %XAS_BOUNDS.
  */
-struct xa_state {
+struct xa_state { /* current level */
 	struct xarray *xa;
-	unsigned long xa_index;
-	unsigned char xa_shift;
-	unsigned char xa_sibs;
-	unsigned char xa_offset;
-	unsigned char xa_pad;		/* Helps gcc generate better code */
+	unsigned long xa_index; /* array index ==~ va */
+	unsigned char xa_shift; /* CONFIG_XARRAY_MULTI: index shift ==~ va shift */
+	unsigned char xa_sibs;  /* CONFIG_XARRAY_MULTI: index range size ==~ va range size */
+	unsigned char xa_offset;/* [owner] slot offset ==~ pt offset */
+	union {
+		unsigned char xa_depth;
+		unsigned char xa_pad;		/* Helps gcc generate better code */
+	};
+
 	struct xa_node *xa_node;
 	struct xa_node *xa_alloc;
 	xa_update_node_t xa_update;
@@ -1147,6 +1155,8 @@ struct xa_state {
 #define XA_ERROR(errno) ((struct xa_node *)(((unsigned long)errno << 2) | 2UL))
 #define XAS_BOUNDS	((struct xa_node *)1UL)
 #define XAS_RESTART	((struct xa_node *)3UL)
+
+/* XAS_NODE last 2bits is 0 */
 
 #define __XA_STATE(array, index, shift, sibs)  {	\
 	.xa = array,					\
@@ -1188,6 +1198,13 @@ struct xa_state {
 			(index >> order) << order,		\
 			order - (order % XA_CHUNK_SHIFT),	\
 			(1U << (order % XA_CHUNK_SHIFT)) - 1)
+
+/**
+ * @order: 'index range' sizebits.
+ * @index: index must be aligned by order; 'index range' needs to split two part: shift and sibs.
+ * @shift: shift means the level, if the shift is equal to 0, the level is the last; if the shift is equal to XA_CHUNK_SHIFT, the level is the last second.
+ * @sibs: sibs means when at the shift of level, the offset of slot.
+ */
 
 #define xas_marked(xas, mark)	xa_marked((xas)->xa, (mark))
 #define xas_trylock(xas)	xa_trylock((xas)->xa)

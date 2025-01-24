@@ -121,7 +121,7 @@ static void xas_squash_marks(const struct xa_state *xas)
 	unsigned int mark = 0;
 	unsigned int limit = xas->xa_offset + xas->xa_sibs + 1;
 
-	if (!xas->xa_sibs)
+	if (!xas->xa_sibs) /* squash: owner mark, sibling unmark */
 		return;
 
 	do {
@@ -185,7 +185,7 @@ static void *xas_start(struct xa_state *xas)
 		if (xas->xa_index)
 			return set_bounds(xas);
 	} else {
-		if ((xas->xa_index >> xa_to_node(entry)->shift) > XA_CHUNK_MASK)
+		if ((xas->xa_index >> xa_to_node(entry)->shift) > XA_CHUNK_MASK) /* 1st level */
 			return set_bounds(xas);
 	}
 
@@ -536,7 +536,7 @@ static void xas_free_nodes(struct xa_state *xas, struct xa_node *top)
 }
 
 /*
- * xas_expand adds nodes to the head of the tree until it has reached
+ * xas_expand adds nodes to the xa_head of the tree until it has reached
  * sufficient height to be able to contain @xas->xa_index
  */
 static int xas_expand(struct xa_state *xas, void *head)
@@ -544,14 +544,14 @@ static int xas_expand(struct xa_state *xas, void *head)
 	struct xarray *xa = xas->xa;
 	struct xa_node *node = NULL;
 	unsigned int shift = 0;
-	unsigned long max = xas_max(xas);
+	unsigned long max = xas_max(xas); /* xa_index if no silbing, xa_index+sibs if silbing */
 
 	if (!head) {
 		if (max == 0)
 			return 0;
 		while ((max >> shift) >= XA_CHUNK_SIZE)
 			shift += XA_CHUNK_SHIFT;
-		return shift + XA_CHUNK_SHIFT;
+		return shift + XA_CHUNK_SHIFT; /* va_head level */
 	} else if (xa_is_node(head)) {
 		node = xa_to_node(head);
 		shift = node->shift + XA_CHUNK_SHIFT;
@@ -626,18 +626,18 @@ static void *xas_create(struct xa_state *xas, bool allow_root)
 	void __rcu **slot;
 	struct xa_node *node = xas->xa_node;
 	int shift;
-	unsigned int order = xas->xa_shift;
+	unsigned int order = xas->xa_shift; /* has sibling/range<start,last> -> shift */
 
 	if (xas_top(node)) {
 		entry = xa_head_locked(xa);
 		xas->xa_node = NULL;
 		if (!entry && xa_zero_busy(xa))
 			entry = XA_ZERO_ENTRY;
-		shift = xas_expand(xas, entry);
+		shift = xas_expand(xas, entry); /* only alloc/update xa_head, level 0~+ */
 		if (shift < 0)
 			return NULL;
 		if (!shift && !allow_root)
-			shift = XA_CHUNK_SHIFT;
+			shift = XA_CHUNK_SHIFT; /* !shift==!max; max==xa_index or xa_index+sibs; xa_index=0(default)*/
 		entry = xa_head_locked(xa);
 		slot = &xa->xa_head;
 	} else if (xas_error(xas)) {
@@ -654,10 +654,10 @@ static void *xas_create(struct xa_state *xas, bool allow_root)
 		slot = &xa->xa_head;
 	}
 
-	while (shift > order) {
+	while (shift > order) { /* if no sibling, the order is 0, the ret entry is the leaf */
 		shift -= XA_CHUNK_SHIFT;
 		if (!entry) {
-			node = xas_alloc(xas, shift);
+			node = xas_alloc(xas, shift); /* alloc xa_node or xa_head at xa_head == NULL */
 			if (!node)
 				break;
 			if (xa_track_free(xa))
@@ -774,7 +774,7 @@ void *xas_store(struct xa_state *xas, void *entry)
 
 	if (xas_invalid(xas))
 		return first;
-	node = xas->xa_node;
+	node = xas->xa_node; /* the entry of node is get!!! */
 	if (node && (xas->xa_shift < node->shift))
 		xas->xa_sibs = 0;
 	if ((first == entry) && !xas->xa_sibs)
@@ -784,14 +784,14 @@ void *xas_store(struct xa_state *xas, void *entry)
 	offset = xas->xa_offset;
 	max = xas->xa_offset + xas->xa_sibs;
 	if (node) {
-		slot = &node->slots[offset];
+		slot = &node->slots[offset]; /* the entry of slot is get!!! */
 		if (xas->xa_sibs)
 			xas_squash_marks(xas);
 	}
 	if (!entry)
 		xas_init_marks(xas);
 
-	for (;;) {
+	for (;;) { /* set the entry(include sibling entry) to a slot */
 		/*
 		 * Must clear the marks before setting the entry to NULL,
 		 * otherwise xas_for_each_marked may find a NULL entry and
@@ -805,12 +805,12 @@ void *xas_store(struct xa_state *xas, void *entry)
 		if (!node)
 			break;
 		count += !next - !entry;
-		values += !xa_is_value(first) - !value;
+		values += !xa_is_value(first) - !value; /* for update_node */
 		if (entry) {
 			if (offset == max)
 				break;
 			if (!xa_is_sibling(entry))
-				entry = xa_mk_sibling(xas->xa_offset);
+				entry = xa_mk_sibling(xas->xa_offset); /* mk a sibling entry: offset<<2|2 */
 		} else {
 			if (offset == XA_CHUNK_MASK)
 				break;
@@ -1291,7 +1291,9 @@ void *xas_find_marked(struct xa_state *xas, unsigned long max, xa_mark_t mark)
 	bool advance = true;
 	unsigned int offset;
 	void *entry;
+	xa_mark_t mark_flags = fls(mark & ~GENMASK(XA_MAX_MARKS - 1, 0)) - XA_MAX_MARKS;
 
+	mark = mark & GENMASK(XA_MAX_MARKS - 1, 0);
 	if (xas_error(xas))
 		return NULL;
 	if (xas->xa_index > max)
@@ -1317,10 +1319,11 @@ void *xas_find_marked(struct xa_state *xas, unsigned long max, xa_mark_t mark)
 	}
 
 	while (xas->xa_index <= max) {
-		if (unlikely(xas->xa_offset == XA_CHUNK_SIZE)) {
+		if (unlikely(xas->xa_offset == XA_CHUNK_SIZE) || mark_flags > xas->xa_depth) { /* slot is full or FIXME: the level is higher than curr */
 			xas->xa_offset = xas->xa_node->offset + 1;
 			xas->xa_node = xa_parent(xas->xa, xas->xa_node);
-			if (!xas->xa_node)
+			xas->xa_depth++;
+			if (!xas->xa_node) /* parent is NULL and xa_node is NULL */
 				break;
 			advance = false;
 			continue;
@@ -1329,7 +1332,7 @@ void *xas_find_marked(struct xa_state *xas, unsigned long max, xa_mark_t mark)
 		if (!advance) {
 			entry = xa_entry(xas->xa, xas->xa_node, xas->xa_offset);
 			if (xa_is_sibling(entry)) {
-				xas->xa_offset = xa_to_sibling(entry);
+				xas->xa_offset = xa_to_sibling(entry); /** sibling include offset<<2|2 */
 				xas_move_index(xas, xas->xa_offset);
 			}
 		}
@@ -1342,7 +1345,7 @@ void *xas_find_marked(struct xa_state *xas, unsigned long max, xa_mark_t mark)
 			if ((xas->xa_index - 1) >= max)
 				goto max;
 			xas->xa_offset = offset;
-			if (offset == XA_CHUNK_SIZE)
+			if (offset == XA_CHUNK_SIZE) /* sibling, and slot is full */
 				continue;
 		}
 

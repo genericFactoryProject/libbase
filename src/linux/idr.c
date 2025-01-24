@@ -382,6 +382,7 @@ int ida_alloc_range(struct ida *ida, unsigned int min, unsigned int max,
 	unsigned bit = min % IDA_BITMAP_BITS;
 	unsigned long flags;
 	struct ida_bitmap *bitmap, *alloc = NULL;
+	xa_mark_t mark_flags = 0; /* FIXME: get mark flags(include depth) */
 
 	if ((int)min < 0)
 		return -ENOSPC;
@@ -392,7 +393,7 @@ int ida_alloc_range(struct ida *ida, unsigned int min, unsigned int max,
 retry:
 	xas_lock_irqsave(&xas, flags);
 next:
-	bitmap = xas_find_marked(&xas, max / IDA_BITMAP_BITS, XA_FREE_MARK);
+	bitmap = xas_find_marked(&xas, max / IDA_BITMAP_BITS, XA_FREE_MARK|mark_flags);
 	if (xas.xa_index > min / IDA_BITMAP_BITS)
 		bit = 0;
 	if (xas.xa_index * IDA_BITMAP_BITS + bit > max)
@@ -428,7 +429,7 @@ next:
 		bit = find_next_zero_bit(bitmap->bitmap, IDA_BITMAP_BITS, bit);
 		if (xas.xa_index * IDA_BITMAP_BITS + bit > max)
 			goto nospc;
-		if (bit == IDA_BITMAP_BITS)
+		if (bit == IDA_BITMAP_BITS) /* bitmap is full */
 			goto next;
 
 		__set_bit(bit, bitmap->bitmap);
@@ -447,6 +448,9 @@ next:
 		}
 		xas_store(&xas, bitmap);
 	}
+	/** 从流程上看，ida在分配过程中，value可以是一个64位的数字或是一个ida_bitmap
+	 * 这个64位的数字是ida_bitmap的第一个成员
+	 */
 out:
 	xas_unlock_irqrestore(&xas, flags);
 	if (xas_nomem(&xas, gfp)) {

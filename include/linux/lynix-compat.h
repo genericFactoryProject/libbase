@@ -491,6 +491,7 @@ struct rt_mutex {
 #define spin_lock_irq(x) (void)(x)
 #define spin_unlock_irq(x) (void)(x)
 #define spin_lock(x) (void)(x)
+#define spin_lock_nested(x, y)
 #define spin_unlock(x) (void)(x)
 #define spin_lock_init(x) (void)(x)
 #define raw_spin_lock_irqsave(x, y) (void)(x);(void)y;
@@ -548,7 +549,15 @@ struct mutex {
 #define mutex_destroy(x)
 #define mutex_unlock(x) (void)(x)
 #define lockdep_assert_held(x) (void)(x)
+#define lockdep_is_held(x) false
 #define mutex_lock_nested(x, y)
+
+/*
+ * For trivial one-depth nesting of a lock-class, the following
+ * global define can be used. (Subsystems with multiple levels
+ * of nesting should define their own lock-nesting subclasses.)
+ */
+#define SINGLE_DEPTH_NESTING			1
 
 
 #define rcu_dereference_check(x, y) (x)
